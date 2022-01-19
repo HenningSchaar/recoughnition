@@ -10,19 +10,46 @@ For preparing the cough data in Terminal on cough folder run:
 for f in *.ogg
       ffmpeg -i $f -c:a pcm_f32le $f.wav
   end
-  
+
 '''
+from email.mime import audio
 import numpy as np
-import soundfile as sf
+import scipy.io.wavfile as scpw
+import sounddevice as sd
 import os
 import random
 
 
 def getRandomCough():
-    return "./cough/" + random.choice(os.listdir("./cough"))
+    chosenFile = random.choice(os.listdir("./cough"))
+    chosenPath = "./cough/" + chosenFile
+    return chosenPath
+
+
+def sumToMono(audioData: np.ndarray):
+    if len(audioData.shape) == 2:
+        data = np.sum(audioData, axis=1)
+        return data
+    else:
+        return audioData
+
+
+def normaliseNdarray(audioData: np.ndarray):
+    # get biggest absolute value for normalisation
+    absmax = max(audioData, key=abs)
+    audioData = np.divide(audioData, absmax)  # normalise values
+    return audioData
+
+
+def playNdarray(audioData: np.ndarray, sampleRate: int):
+    sd.play(audioData, sampleRate, blocking=True)
+    return
 
 
 if __name__ == "__main__":
     # Load random audio file from cough folder. (.wav)
-    data, samplerate = sf.read(getRandomCough())
-    data = np.divide(data, data.max())  # normalise the audio file
+    sr, data = scpw.read(getRandomCough())
+    data = sumToMono(data)
+    data = normaliseNdarray(data)
+    scaled = np.int16(data/np.max(np.abs(data)) * 32767)
+    playNdarray(data, sr)
