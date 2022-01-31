@@ -1,4 +1,5 @@
 '''
+Place coughs in ./cough and music in ./music
 This is the place for creating audio chunks with corresponding data about if
 and where there are coughs in the resulting audio chunks.
 
