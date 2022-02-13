@@ -133,9 +133,11 @@ def getFrame():
     srCough, dataCough = processCough()
     srMusic, dataMusic = processMusic()
     if srMusic != srCough:
-        # A function for matching the sample rates
-        # has to be written in the future.
-        raise ValueError('Sample rates of music and cough do not match.')
+        if srMusic>srCough:
+            dataMusic = scipy.signal.resample(dataMusic, int(len(dataMusic)/srMusic*srCough), domain='time')
+        else:
+            dataCough = scipy.signal.resample(dataCough, int(len(dataCough)/srCough*srMusic), domain='time')
+        #raise ValueError('Sample rates of music and cough do not match.')
     data = addCoughToMusic(dataMusic, dataCough, srMusic)
     return srMusic, data
 
