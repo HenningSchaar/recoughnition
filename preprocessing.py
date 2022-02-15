@@ -33,7 +33,7 @@ from . import vggish_params
 from . import mel_features
 rmsStepSize = 100  # Step size for RMS analysis in milliseconds
 rmsThreshold = 0.001  # 0.5  # Threshold for cutting of silence
-frameLength = 2  # Size of generated audio pieces in seconds
+frameLength = 1  # Size of generated audio pieces in seconds
 coughScaling = 1  # relation in amplitude between cough and music
 
 
@@ -181,7 +181,9 @@ def processMusic():
     return sr, data
 
 
-def getFrame(withCough: bool):
+def getFrame(withCough: bool, length: float):
+    global frameLength
+    frameLength = length
     srMusic, dataMusic = processMusic()
     if withCough:
         srCough, dataCough = processCough()
