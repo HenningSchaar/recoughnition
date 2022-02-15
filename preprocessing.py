@@ -23,7 +23,6 @@ The getFrame function will return sampleRate: int, audioData: np.ndarray.
 
 import numpy as np
 import scipy.io.wavfile as scpw
-import sounddevice as sd
 import os
 import random
 import scipy
@@ -118,7 +117,7 @@ def cutRandomFrame(audioData: np.ndarray, sampleRate: int):
 
 def playNdarray(audioData: np.ndarray, sampleRate: int):
     # audioData = np.int16(audioData/np.max(np.abs(audioData)) * 32767)
-    sd.play(audioData, sampleRate, blocking=True)
+    # sd.play(audioData, sampleRate, blocking=True)
     return
 
 
@@ -207,8 +206,6 @@ if __name__ == "__main__":
     # Load random audio file from cough folder. (.wav)
     while True:
         sr, data, vggish = getFrame(False)
-        playNdarray(data, sr)
         print(vggish)
         sr, data, vggish = getFrame(True)
-        playNdarray(data, sr)
         print(vggish)
