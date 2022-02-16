@@ -1,5 +1,5 @@
 '''
-Place coughs in ./cough and music in ./music
+Place coughs in ../cough and music in ../music
 This is the place for creating audio chunks with corresponding data about if
 and where there are coughs in the resulting audio chunks.
 
@@ -29,12 +29,12 @@ import scipy
 import resampy
 from retry import retry
 
-from . import vggish_params
-from . import mel_features
+from recoughnition import vggish_params
+from recoughnition import mel_features
 rmsStepSize = 100  # Step size for RMS analysis in milliseconds
 rmsThreshold = 0.001  # 0.5  # Threshold for cutting of silence
 frameLength = 1  # Size of generated audio pieces in seconds
-coughScaling = 1  # relation in amplitude between cough and music
+coughScaling = 0.5  # relation in amplitude between cough and music
 
 
 def waveform_to_examples(data, sample_rate):
@@ -169,7 +169,9 @@ def processCough():
     data = np.int16(data/np.max(np.abs(data)) * 32767)
     data = removeSilence(data, sr)
     data = cutRandomFrame(data, sr)
-    return sr, data
+    if sr != vggish_params.SAMPLE_RATE:
+            data = resampy.resample(data, sr, vggish_params.SAMPLE_RATE)
+    return vggish_params.SAMPLE_RATE, data
 
 
 @retry()
@@ -178,36 +180,30 @@ def processMusic():
     data = sumToMono(data)
     data = np.int16(data/np.max(np.abs(data)) * 32767)
     data = cutRandomFrame(data, sr)
-    return sr, data
+    if sr != vggish_params.SAMPLE_RATE:
+            data = resampy.resample(data, sr, vggish_params.SAMPLE_RATE)
+    return vggish_params.SAMPLE_RATE, data
 
 
 def getFrame(withCough: bool, length: float):
     global frameLength
     frameLength = length
     srMusic, dataMusic = processMusic()
+    
     if withCough:
         srCough, dataCough = processCough()
-
-        if srMusic != srCough:
-            # raise ValueError('Sample rates of music and cough do not match.')
-            if srMusic > srCough:
-                dataMusic = scipy.signal.resample(dataMusic, int(
-                    len(dataMusic)/srMusic*srCough), domain='time')
-            else:
-                dataCough = scipy.signal.resample(dataCough, int(
-                    len(dataCough)/srCough*srMusic), domain='time')
         data = addCoughToMusic(dataMusic, dataCough, srMusic)
-        vggish = waveform_to_examples(data, srMusic)
-        return srMusic, data, vggish
+        # vggish = waveform_to_examples(data, srMusic)
+        return srMusic, data
     else:
-        vggish = waveform_to_examples(dataMusic, srMusic)
-        return srMusic, dataMusic, vggish
+        # vggish = waveform_to_examples(dataMusic, srMusic)
+        return srMusic, dataMusic
 
 
 if __name__ == "__main__":
     # Load random audio file from cough folder. (.wav)
     while True:
-        sr, data, vggish = getFrame(False)
+        sr, data, vggish = getFrame(False, 0.97)
         print(vggish)
-        sr, data, vggish = getFrame(True)
+        sr, data, vggish = getFrame(True, 0.97)
         print(vggish)
