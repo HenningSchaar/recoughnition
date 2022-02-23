@@ -120,10 +120,7 @@ def cutIntoFrames(audioData: np.ndarray, sampleRate: int):
     sampleFrameLength = frameLengthInSamples(sampleRate, frameLength)
     audioDataLength = len(audioData) - (len(audioData) %
                                         sampleFrameLength)
-    print(len(audioData))
-    print(audioDataLength)
     audioFrames = np.split(audioData[0:audioDataLength], sampleFrameLength)
-    print(audioFrames)
     return audioFrames
 
 
