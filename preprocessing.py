@@ -156,7 +156,7 @@ def addCoughToMusic(dataMusic: np.ndarray,
     minusThreeDb = 0.7079457843841379
     dataCough = dataCough * coughScaling
     data = np.add(dataMusic*minusThreeDb, dataCough*minusThreeDb)
-    data = normaliseNdarray(data)
+    #data = normaliseNdarray(data)
     # data = np.int16(data/np.max(np.abs(data)) * 32767)
     return data
 
@@ -170,7 +170,7 @@ def processCough():
     data = removeSilence(data, sr)
     data = cutRandomFrame(data, sr)
     if sr != vggish_params.SAMPLE_RATE:
-            data = resampy.resample(data, sr, vggish_params.SAMPLE_RATE)
+        data = resampy.resample(data, sr, vggish_params.SAMPLE_RATE)
     return vggish_params.SAMPLE_RATE, data
 
 
@@ -181,7 +181,7 @@ def processMusic():
     data = np.int16(data/np.max(np.abs(data)) * 32767)
     data = cutRandomFrame(data, sr)
     if sr != vggish_params.SAMPLE_RATE:
-            data = resampy.resample(data, sr, vggish_params.SAMPLE_RATE)
+        data = resampy.resample(data, sr, vggish_params.SAMPLE_RATE)
     return vggish_params.SAMPLE_RATE, data
 
 
@@ -198,8 +198,26 @@ def getFrame(withCough: bool, length: float):
     else:
         # vggish = waveform_to_examples(dataMusic, srMusic)
         return srMusic, dataMusic
+'''
+def cutTestFrame(audioData: np.ndarray, sampleRate: int, frame_number:int):
+    randomSecondAudio = audioData[sampleRate*frame_number:sampleRate*(frame_number+1)]
+    # print(f"start: {startPos} length: {len(randomSecondAudio)}")
+    return randomSecondAudio
 
+def processMusic2(filename, frame_number):
+    sr, data = scpw.read(filename)
+    data = sumToMono(data)
+    data = normaliseNdarray(data)
+    data = np.int16(data/np.max(np.abs(data)) * 32767)
+    data = cutTestFrame(data, sr, frame_number)
+    if sr != vggish_params.SAMPLE_RATE:
+            data = resampy.resample(data, sr, vggish_params.SAMPLE_RATE)
+    return vggish_params.SAMPLE_RATE, data
 
+def getFrame2(filename, frame_number):
+    srMusic, dataMusic = processMusic2(filename, frame_number)
+    return srMusic, dataMusic
+'''
 if __name__ == "__main__":
     # Load random audio file from cough folder. (.wav)
     while True:
