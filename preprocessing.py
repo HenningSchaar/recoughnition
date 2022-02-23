@@ -21,6 +21,7 @@ The getFrame function will return sampleRate: int, audioData: np.ndarray.
 
 '''
 
+import string
 import numpy as np
 import scipy.io.wavfile as scpw
 import os
@@ -115,6 +116,17 @@ def cutRandomFrame(audioData: np.ndarray, sampleRate: int):
     return randomSecondAudio
 
 
+def cutIntoFrames(audioData: np.ndarray, sampleRate: int):
+    sampleFrameLength = frameLengthInSamples(sampleRate, frameLength)
+    audioDataLength = len(audioData) - (len(audioData) %
+                                        sampleFrameLength)
+    print(len(audioData))
+    print(audioDataLength)
+    audioFrames = np.split(audioData[0:audioDataLength], sampleFrameLength)
+    print(audioFrames)
+    return audioFrames
+
+
 def playNdarray(audioData: np.ndarray, sampleRate: int):
     # audioData = np.int16(audioData/np.max(np.abs(audioData)) * 32767)
     # sd.play(audioData, sampleRate, blocking=True)
@@ -154,9 +166,9 @@ def addCoughToMusic(dataMusic: np.ndarray,
                     dataCough: np.ndarray,
                     sampleRate: int):
     minusThreeDb = 0.7079457843841379
-    dataCough = dataCough * coughScaling
+    dataCough = dataCough * coughScaling * random.uniform(0.1, 1.0)
     data = np.add(dataMusic*minusThreeDb, dataCough*minusThreeDb)
-    #data = normaliseNdarray(data)
+    # data = normaliseNdarray(data)
     # data = np.int16(data/np.max(np.abs(data)) * 32767)
     return data
 
@@ -189,7 +201,7 @@ def getFrame(withCough: bool, length: float):
     global frameLength
     frameLength = length
     srMusic, dataMusic = processMusic()
-    
+
     if withCough:
         srCough, dataCough = processCough()
         data = addCoughToMusic(dataMusic, dataCough, srMusic)
@@ -198,6 +210,20 @@ def getFrame(withCough: bool, length: float):
     else:
         # vggish = waveform_to_examples(dataMusic, srMusic)
         return srMusic, dataMusic
+
+
+def getTestFrames(path: string, length: float):
+    global frameLength
+    frameLength = length
+    sr, data = scpw.read("./test_music/" + path)
+    data = sumToMono(data)
+    data = np.int16(data/np.max(np.abs(data)) * 32767)
+    if sr != vggish_params.SAMPLE_RATE:
+        data = resampy.resample(data, sr, vggish_params.SAMPLE_RATE)
+    data = cutIntoFrames(data, vggish_params.SAMPLE_RATE)
+    return data
+
+
 '''
 def cutTestFrame(audioData: np.ndarray, sampleRate: int, frame_number:int):
     randomSecondAudio = audioData[sampleRate*frame_number:sampleRate*(frame_number+1)]
@@ -220,8 +246,11 @@ def getFrame2(filename, frame_number):
 '''
 if __name__ == "__main__":
     # Load random audio file from cough folder. (.wav)
+
+    '''
     while True:
         sr, data, vggish = getFrame(False, 0.97)
         print(vggish)
         sr, data, vggish = getFrame(True, 0.97)
         print(vggish)
+    '''
