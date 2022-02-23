@@ -118,19 +118,10 @@ def cutRandomFrame(audioData: np.ndarray, sampleRate: int):
 
 def cutIntoFrames(audioData: np.ndarray, sampleRate: int):
     sampleFrameLength = frameLengthInSamples(sampleRate, frameLength)
-
-
-<< << << < HEAD
-audioDataLength = len(audioData) - (len(audioData) % sampleFrameLength)
-arraySplit = audioDataLength / sampleFrameLength
-audioFrames = np.split(
-    audioData[0:audioDataLength], arraySplit)
-== == == =
-audioDataLength = len(audioData) - (len(audioData) %
-                                    sampleFrameLength)
-audioFrames = np.split(audioData[0:audioDataLength], sampleFrameLength)
->>>>>> > 97e399ef5627301efa13a6cf706439dfbe16c98a
-return audioFrames
+    audioDataLength = len(audioData) - (len(audioData) %
+                                        sampleFrameLength)
+    audioFrames = np.split(audioData[0:audioDataLength], sampleFrameLength)
+    return audioFrames
 
 
 def playNdarray(audioData: np.ndarray, sampleRate: int):
