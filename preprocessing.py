@@ -30,10 +30,8 @@ import scipy
 import resampy
 from retry import retry
 
-# from recoughnition
-import vggish_params
-# from recoughnition
-import mel_features
+from recoughnition import vggish_params
+from recoughnition import mel_features
 rmsStepSize = 100  # Step size for RMS analysis in milliseconds
 rmsThreshold = 0.001  # 0.5  # Threshold for cutting of silence
 frameLength = 1  # Size of generated audio pieces in seconds
@@ -120,11 +118,19 @@ def cutRandomFrame(audioData: np.ndarray, sampleRate: int):
 
 def cutIntoFrames(audioData: np.ndarray, sampleRate: int):
     sampleFrameLength = frameLengthInSamples(sampleRate, frameLength)
-    audioDataLength = len(audioData) - (len(audioData) % sampleFrameLength)
-    arraySplit = audioDataLength / sampleFrameLength
-    audioFrames = np.split(
-        audioData[0:audioDataLength], arraySplit)
-    return audioFrames
+
+
+<< << << < HEAD
+audioDataLength = len(audioData) - (len(audioData) % sampleFrameLength)
+arraySplit = audioDataLength / sampleFrameLength
+audioFrames = np.split(
+    audioData[0:audioDataLength], arraySplit)
+== == == =
+audioDataLength = len(audioData) - (len(audioData) %
+                                    sampleFrameLength)
+audioFrames = np.split(audioData[0:audioDataLength], sampleFrameLength)
+>>>>>> > 97e399ef5627301efa13a6cf706439dfbe16c98a
+return audioFrames
 
 
 def playNdarray(audioData: np.ndarray, sampleRate: int):
