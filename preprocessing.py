@@ -118,9 +118,10 @@ def cutRandomFrame(audioData: np.ndarray, sampleRate: int):
 
 def cutIntoFrames(audioData: np.ndarray, sampleRate: int):
     sampleFrameLength = frameLengthInSamples(sampleRate, frameLength)
-    audioDataLength = len(audioData) - (len(audioData) %
-                                        sampleFrameLength)
-    audioFrames = np.split(audioData[0:audioDataLength], sampleFrameLength)
+    audioDataLength = len(audioData) - (len(audioData) % sampleFrameLength)
+    arraySplit = audioDataLength / sampleFrameLength
+    audioFrames = np.split(
+        audioData[0:audioDataLength], arraySplit)
     return audioFrames
 
 
