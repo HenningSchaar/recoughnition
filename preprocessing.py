@@ -26,62 +26,20 @@ import numpy as np
 import scipy.io.wavfile as scpw
 import os
 import random
-import scipy
 import resampy
 from retry import retry
+from pedalboard import Reverb
 
-from recoughnition import vggish_params
-from recoughnition import mel_features
+# import sounddevice as sd
+
 rmsStepSize = 100  # Step size for RMS analysis in milliseconds
-rmsThreshold = 0.001  # 0.5  # Threshold for cutting of silence
+rmsThreshold = 0.01  # 0.5  # Threshold for cutting of silence
 frameLength = 1  # Size of generated audio pieces in seconds
-coughScaling = 0.5  # relation in amplitude between cough and music
-
-
-def waveform_to_examples(data, sample_rate):
-    """Converts audio waveform into an array of examples for VGGish.
-    Args:
-      data: np.array of either one dimension (mono) or two dimensions
-        (multi-channel, with the outer dimension representing channels).
-        Each sample is generally expected to lie in the range [-1.0, +1.0],
-        although this is not required.
-      sample_rate: Sample rate of data.
-    Returns:
-      3-D np.array of shape [num_examples, num_frames, num_bands]
-      which represents a sequence of examples, each of which contains a patch
-      of log mel spectrogram, covering num_frames frames of audio and num_bands
-      mel frequency bands, where the frame length is
-      vggish_params.STFT_HOP_LENGTH_SECONDS.
-    """
-    # Convert to mono.
-    if len(data.shape) > 1:
-        data = np.mean(data, axis=1)
-    # Resample to the rate assumed by VGGish.
-    if sample_rate != vggish_params.SAMPLE_RATE:
-        data = resampy.resample(data, sample_rate, vggish_params.SAMPLE_RATE)
-
-    # Compute log mel spectrogram features.
-    log_mel = mel_features.log_mel_spectrogram(
-        data,
-        audio_sample_rate=vggish_params.SAMPLE_RATE,
-        log_offset=vggish_params.LOG_OFFSET,
-        window_length_secs=vggish_params.STFT_WINDOW_LENGTH_SECONDS,
-        hop_length_secs=vggish_params.STFT_HOP_LENGTH_SECONDS,
-        num_mel_bins=vggish_params.NUM_MEL_BINS,
-        lower_edge_hertz=vggish_params.MEL_MIN_HZ,
-        upper_edge_hertz=vggish_params.MEL_MAX_HZ)
-
-    # Frame features into examples.
-    features_sample_rate = 1.0 / vggish_params.STFT_HOP_LENGTH_SECONDS
-    example_window_length = int(round(
-        vggish_params.EXAMPLE_WINDOW_SECONDS * features_sample_rate))
-    example_hop_length = int(round(
-        vggish_params.EXAMPLE_HOP_SECONDS * features_sample_rate))
-    log_mel_examples = mel_features.frame(
-        log_mel,
-        window_length=example_window_length,
-        hop_length=example_hop_length)
-    return log_mel_examples
+loudestCough = -12  # the loudest possible coughing volume in dB
+quietestCough = -28  # the quietest possible coughing volume in dB
+globalSampleRate = 32000  # sampleRate used for the output
+reverb = Reverb()
+reverb.dry_level = 0.5
 
 
 def getRandomFile(directory: str):
@@ -125,14 +83,21 @@ def cutIntoFrames(audioData: np.ndarray, sampleRate: int):
     return audioFrames
 
 
+'''
 def playNdarray(audioData: np.ndarray, sampleRate: int):
-    # audioData = np.int16(audioData/np.max(np.abs(audioData)) * 32767)
-    # sd.play(audioData, sampleRate, blocking=True)
+    audioData = np.int16(audioData/np.max(np.abs(audioData)) * 32767)
+    sd.play(audioData, sampleRate, blocking=True)
     return
+'''
 
 
 def RMS(audioData: np.ndarray):
     return np.sqrt(abs(np.mean(audioData**2)))
+
+
+def dbToA(db: float):
+    amplitude = 10**(db/20)
+    return amplitude
 
 
 def frameLengthInSamples(sampleRate: int, frameLength: int):
@@ -147,12 +112,16 @@ def removeSilence(audioData: np.ndarray, sampleRate: int):
     for i in range(0, len(audioData) - rmsSampleStep, rmsSampleStep):
         rms = RMS(audioData[i:i+rmsSampleStep])
         if startPos is None:
-            if rms >= rmsThreshold:
+            if rms > rmsThreshold:
                 startPos = i
         else:
             if endPos is None:
                 if rms <= rmsThreshold:
                     endPos = i
+    if startPos is None:
+        raise ValueError('Audio Sample is too quiet.')
+    if endPos is None:
+        endPos = len(audioData)
     if endPos-startPos < frameLengthInSamples(sampleRate, frameLength):
         raise ValueError('Audio Sample too short.')
     else:
@@ -164,24 +133,33 @@ def addCoughToMusic(dataMusic: np.ndarray,
                     dataCough: np.ndarray,
                     sampleRate: int):
     minusThreeDb = 0.7079457843841379
-    dataCough = dataCough * coughScaling * random.uniform(0.1, 1.0)
+    lowerLimit = dbToA(quietestCough)
+    upperLimit = dbToA(loudestCough)
+    dataCough = dataCough * random.uniform(lowerLimit, upperLimit)
     data = np.add(dataMusic*minusThreeDb, dataCough*minusThreeDb)
     # data = normaliseNdarray(data)
     # data = np.int16(data/np.max(np.abs(data)) * 32767)
     return data
 
 
+# def addRandomVerb(data: np.ndarray, sampleRate: int):
+
+
 @retry()
 def processCough():
-    sr, data = scpw.read(getRandomFile("./cough/"))
+    reverb.wet_level = random.uniform(0.0, 0.5)
+    reverb.room_size = random.uniform(0.1, 0.6)
+    path = getRandomFile("./cough/")
+    sr, data = scpw.read(path)
     data = sumToMono(data)
-    data = normaliseNdarray(data)
+    # data = normaliseNdarray(data)
     data = np.int16(data/np.max(np.abs(data)) * 32767)
+    data = reverb(data, sr)
     data = removeSilence(data, sr)
     data = cutRandomFrame(data, sr)
-    if sr != vggish_params.SAMPLE_RATE:
-        data = resampy.resample(data, sr, vggish_params.SAMPLE_RATE)
-    return vggish_params.SAMPLE_RATE, data
+    if sr != globalSampleRate:
+        data = resampy.resample(data, sr, globalSampleRate)
+    return globalSampleRate, data
 
 
 @retry()
@@ -190,9 +168,9 @@ def processMusic():
     data = sumToMono(data)
     data = np.int16(data/np.max(np.abs(data)) * 32767)
     data = cutRandomFrame(data, sr)
-    if sr != vggish_params.SAMPLE_RATE:
-        data = resampy.resample(data, sr, vggish_params.SAMPLE_RATE)
-    return vggish_params.SAMPLE_RATE, data
+    if sr != globalSampleRate:
+        data = resampy.resample(data, sr, globalSampleRate)
+    return globalSampleRate, data
 
 
 def getFrame(withCough: bool, length: float):
@@ -216,39 +194,13 @@ def getTestFrames(path: string, length: float):
     sr, data = scpw.read("./test_music/" + path)
     data = sumToMono(data)
     data = np.int16(data/np.max(np.abs(data)) * 32767)
-    if sr != vggish_params.SAMPLE_RATE:
-        data = resampy.resample(data, sr, vggish_params.SAMPLE_RATE)
-    data = cutIntoFrames(data, vggish_params.SAMPLE_RATE)
+    if sr != globalSampleRate:
+        data = resampy.resample(data, sr, globalSampleRate)
+    data = cutIntoFrames(data, globalSampleRate)
     return data
 
 
-'''
-def cutTestFrame(audioData: np.ndarray, sampleRate: int, frame_number:int):
-    randomSecondAudio = audioData[sampleRate*frame_number:sampleRate*(frame_number+1)]
-    # print(f"start: {startPos} length: {len(randomSecondAudio)}")
-    return randomSecondAudio
-
-def processMusic2(filename, frame_number):
-    sr, data = scpw.read(filename)
-    data = sumToMono(data)
-    data = normaliseNdarray(data)
-    data = np.int16(data/np.max(np.abs(data)) * 32767)
-    data = cutTestFrame(data, sr, frame_number)
-    if sr != vggish_params.SAMPLE_RATE:
-            data = resampy.resample(data, sr, vggish_params.SAMPLE_RATE)
-    return vggish_params.SAMPLE_RATE, data
-
-def getFrame2(filename, frame_number):
-    srMusic, dataMusic = processMusic2(filename, frame_number)
-    return srMusic, dataMusic
-'''
 if __name__ == "__main__":
-    # Load random audio file from cough folder. (.wav)
-    test = getTestFrames('adviceForTheYoungAtHeart.wav', 1)
-    '''
     while True:
-        sr, data, vggish = getFrame(False, 0.97)
-        print(vggish)
-        sr, data, vggish = getFrame(True, 0.97)
-        print(vggish)
-    '''
+        sr, data = getFrame(True, 1.0)
+        # playNdarray(data, sr)
