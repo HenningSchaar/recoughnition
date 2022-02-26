@@ -35,8 +35,8 @@ from pedalboard import Reverb
 rmsStepSize = 100  # Step size for RMS analysis in milliseconds
 rmsThreshold = 0.01  # 0.5  # Threshold for cutting of silence
 frameLength = 1  # Size of generated audio pieces in seconds
-loudestCough = -18  # the loudest possible coughing volume in dB
-quietestCough = -34  # the quietest possible coughing volume in dB
+loudestCough = -6  # the loudest possible coughing volume in dB
+quietestCough = -24  # the quietest possible coughing volume in dB
 globalSampleRate = 32000  # sampleRate used for the output
 reverb = Reverb()
 reverb.dry_level = 0.5
