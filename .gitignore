@@ -2,3 +2,4 @@
 *.pyo
 *.wav
 .DS_Store
+*.npy

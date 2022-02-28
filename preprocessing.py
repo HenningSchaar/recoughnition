@@ -43,6 +43,9 @@ reverb.dry_level = 0.5
 
 
 def getRandomFile(directory: str):
+    '''
+    Returns a random path from chosen directory.
+    '''
     chosenFile = random.choice(os.listdir(directory))
     # print(chosenFile)
     chosenPath = directory + chosenFile
@@ -50,6 +53,9 @@ def getRandomFile(directory: str):
 
 
 def sumToMono(audioData: np.ndarray):
+    '''
+    Sums a stereo audio file to mono.
+    '''
     if len(audioData.shape) == 2:
         data = np.sum(audioData, axis=1)
         return data
@@ -58,13 +64,18 @@ def sumToMono(audioData: np.ndarray):
 
 
 def normaliseNdarray(audioData: np.ndarray):
-    # get biggest absolute value for normalisation
+    '''
+    Returns biggest absolute value of ndarray for normalisation.
+    '''
     absmax = max(audioData, key=abs)
     audioData = np.divide(audioData, absmax)  # normalise values
     return audioData
 
 
 def cutRandomFrame(audioData: np.ndarray, sampleRate: int):
+    '''
+    Randomly cuts a frame from a bigger audio file and returns it.
+    '''
     sampleFrameLength = frameLengthInSamples(sampleRate, frameLength)
     range = len(audioData) - sampleFrameLength
     startPos = random.randrange(range)
@@ -75,6 +86,9 @@ def cutRandomFrame(audioData: np.ndarray, sampleRate: int):
 
 
 def cutIntoFrames(audioData: np.ndarray, sampleRate: int):
+    '''
+    Cut a longer audio file into consecutive frames.
+    '''
     sampleFrameLength = frameLengthInSamples(sampleRate, frameLength)
     audioDataLength = len(audioData) - (len(audioData) % sampleFrameLength)
     arraySplit = audioDataLength / sampleFrameLength
@@ -92,20 +106,32 @@ def playNdarray(audioData: np.ndarray, sampleRate: int):
 
 
 def RMS(audioData: np.ndarray):
+    '''
+    Return RMS Value over ndarray.
+    '''
     return np.sqrt(abs(np.mean(audioData**2)))
 
 
 def dbToA(db: float):
+    '''
+    Convert decibels to amplitude.
+    '''
     amplitude = 10**(db/20)
     return amplitude
 
 
 def frameLengthInSamples(sampleRate: int, frameLength: int):
+    '''
+    Return frame Length in samples when given length in seconds and samplerate.
+    '''
     frameLength = round(sampleRate * frameLength)
     return frameLength
 
 
 def removeSilence(audioData: np.ndarray, sampleRate: int):
+    '''
+    Remove silence at the beginning and end of an audio file.
+    '''
     rmsSampleStep = round(rmsStepSize*(sampleRate/1000))
     startPos = None
     endPos = None
@@ -132,27 +158,27 @@ def removeSilence(audioData: np.ndarray, sampleRate: int):
 def addCoughToMusic(dataMusic: np.ndarray,
                     dataCough: np.ndarray,
                     sampleRate: int):
+    '''
+    Add a coughing frame to a music frame with randomized volume.
+    '''
     minusThreeDb = 0.7079457843841379
     lowerLimit = dbToA(quietestCough)
     upperLimit = dbToA(loudestCough)
     dataCough = dataCough * random.uniform(lowerLimit, upperLimit)
     data = np.add(dataMusic*minusThreeDb, dataCough*minusThreeDb)
-    # data = normaliseNdarray(data)
-    # data = np.int16(data/np.max(np.abs(data)) * 32767)
     return data
-
-
-# def addRandomVerb(data: np.ndarray, sampleRate: int):
 
 
 @retry()
 def processCough():
+    '''
+    Create a cough frame with reverb.
+    '''
     reverb.wet_level = random.uniform(0.0, 0.5)
     reverb.room_size = random.uniform(0.1, 0.6)
     path = getRandomFile("./cough/")
     sr, data = scpw.read(path)
     data = sumToMono(data)
-    # data = normaliseNdarray(data)
     data = np.int16(data/np.max(np.abs(data)) * 32767)
     data = reverb(data, sr)
     data = removeSilence(data, sr)
@@ -164,6 +190,9 @@ def processCough():
 
 @retry()
 def processMusic():
+    '''
+    Create a music frame.
+    '''
     sr, data = scpw.read(getRandomFile("./music/"))
     data = sumToMono(data)
     data = np.int16(data/np.max(np.abs(data)) * 32767)
@@ -174,6 +203,9 @@ def processMusic():
 
 
 def getFrame(withCough: bool, length: float):
+    '''
+    Create a frame containing music and optionally with a cough frame added.
+    '''
     global frameLength
     frameLength = length
     srMusic, dataMusic = processMusic()
@@ -189,6 +221,9 @@ def getFrame(withCough: bool, length: float):
 
 
 def getTestFrames(path: string, length: float):
+    '''
+    Get consecutive frames from a longer audio file.
+    '''
     global frameLength
     frameLength = length
     sr, data = scpw.read("./test_music/" + path)
